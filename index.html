@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Práctica 0: Criptografía ESCOM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --neon-green: #0f0;
+            --neon-red: #ff3333;
+            --dark-bg: #050505;
+        }
+
+        /* --- MATRIX CANVAS --- */
+        #matrixCanvas {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1; background-color: var(--dark-bg);
+        }
+
+        /* --- SCROLLBARS --- */
+        *::-webkit-scrollbar { display: none; }
+        body {
+            color: var(--neon-green); font-family: 'Share Tech Mono', monospace;
+            height: 100vh; overflow: hidden;
+            -ms-overflow-style: none; scrollbar-width: none;
+        }
+
+        /* --- LAYOUT --- */
+        .wrapper { display: flex; height: 100vh; width: 100%; }
+
+        .sidebar {
+            width: 300px; background-color: rgba(0, 0, 0, 0.85); 
+            border-right: 2px solid var(--neon-green);
+            box-shadow: 5px 0 15px rgba(0, 255, 0, 0.1);
+            overflow-y: auto; flex-shrink: 0; padding: 2rem;
+            display: flex; flex-direction: column; z-index: 10; backdrop-filter: blur(5px);
+        }
+
+        .main-content {
+            flex-grow: 1; overflow-y: auto; padding: 40px; position: relative; z-index: 5;
+        }
+
+        /* --- TEXTO --- */
+        .hacker-header {
+            border-bottom: 1px dashed var(--neon-green); padding-bottom: 10px;
+            margin-bottom: 20px; text-shadow: 0 0 5px var(--neon-green); user-select: none;
+        }
+        .student-info p { margin-bottom: 5px; font-size: 1.1rem; color: #ccc; }
+        .student-info strong { color: var(--neon-green); text-transform: uppercase; }
+
+        .practice-info {
+            margin-top: auto; border-top: 1px solid #333; padding-top: 15px;
+            color: #666; font-size: 1.4rem;
+        }
+        .practice-info h6 { color: #fff; font-weight: bold; }
+
+        .silhouette-outline {
+            filter: drop-shadow(2px 2px 0 white) drop-shadow(-2px 2px 0 white) drop-shadow(2px -2px 0 white) drop-shadow(-2px -2px 0 white);
+            object-fit: contain; margin-bottom: 20px; pointer-events: none;
+        }
+
+        /* --- TABS --- */
+        .nav-tabs { border-bottom: 1px solid var(--neon-green); }
+        .nav-tabs .nav-link { color: #555; border: none; font-size: 1.2rem; transition: 0.3s; }
+        .nav-tabs .nav-link:hover { color: #fff; }
+        .nav-tabs .nav-link.active {
+            background-color: transparent; color: var(--neon-green);
+            border-bottom: 3px solid var(--neon-green); text-shadow: 0 0 8px var(--neon-green);
+        }
+
+        /* --- UPLOAD BOXES --- */
+        .file-input-hidden { display: none; }
+        .custom-upload-box {
+            border: 2px dashed #444; background-color: rgba(5, 5, 5, 0.9); 
+            border-radius: 8px; padding: 20px; text-align: center; cursor: pointer;
+            transition: all 0.4s ease; min-height: 350px; display: flex;
+            flex-direction: column; justify-content: center; align-items: center; position: relative;
+        }
+        .custom-upload-box:hover { border-color: var(--neon-green); box-shadow: 0 0 15px rgba(0, 255, 0, 0.15); }
+        
+        /* Efecto Visual DragOver */
+        .custom-upload-box.drag-over {
+            background-color: rgba(0, 255, 0, 0.1) !important;
+            border-color: #fff !important;
+            transform: scale(1.02);
+        }
+
+        .custom-upload-box.disabled-state { cursor: default; border-style: solid; border-color: #333; }
+        
+        .upload-info-container { transition: all 0.4s ease; }
+        .custom-upload-box i.main-icon { font-size: 2.5rem; margin-bottom: 10px; color: #888; display: block; transition: color 0.3s;}
+        .custom-upload-box:hover i.main-icon { color: var(--neon-green); }
+        .upload-title { font-weight: bold; letter-spacing: 1px; user-select: none; }
+        .file-status { font-size: 0.8rem; color: #aaa; margin-top: 5px; display: block; user-select: none; }
+
+        .custom-upload-box.has-file { justify-content: flex-start; padding-top: 20px; }
+        .custom-upload-box.has-file .upload-info-container {
+            display: flex; align-items: center; justify-content: space-between;
+            width: 100%; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px;
+        }
+        .custom-upload-box.has-file .main-icon { font-size: 1.5rem !important; margin-bottom: 0 !important; margin-right: 15px; }
+        .custom-upload-box.has-file .file-status { display: none; }
+
+        .btn-remove-file {
+            background: transparent; border: 1px solid var(--neon-red); color: var(--neon-red);
+            padding: 4px 12px; font-size: 0.8rem; cursor: pointer; border-radius: 4px; transition: 0.3s;
+            display: none; pointer-events: auto;
+        }
+        .btn-remove-file:hover { background: var(--neon-red); color: #000; box-shadow: 0 0 10px var(--neon-red); }
+        .has-file .btn-remove-file { display: block; }
+
+        .preview-area {
+            width: 100%; display: none; justify-content: center; align-items: center;
+            overflow: hidden; background: #000; border-radius: 4px; padding: 10px; border: 1px solid #222;
+        }
+        .custom-upload-box.has-file .preview-area { display: flex; animation: fadeIn 0.5s; }
+        .preview-img-content { width: 100%; height: auto; max-height: 250px; object-fit: contain; }
+        .preview-text-content {
+            width: 100%; max-height: 250px; overflow-y: auto; color: var(--neon-green);
+            font-size: 0.75rem; text-align: left; font-family: 'Courier New', monospace; white-space: pre-wrap;
+        }
+
+        .btn-cyber {
+            width: 100%; background: rgba(0,0,0,0.8); border: 2px solid var(--neon-green); color: var(--neon-green);
+            font-size: 1.2rem; padding: 15px; text-transform: uppercase; letter-spacing: 3px; font-weight: bold; transition: 0.3s;
+        }
+        .btn-cyber:hover { background-color: var(--neon-green); color: #000; box-shadow: 0 0 20px var(--neon-green); }
+
+        .console-box {
+            background-color: rgba(0,0,0,0.9); border: 1px solid #333; padding: 15px; margin-top: 30px;
+            font-family: 'Courier New', Courier, monospace; font-size: 0.85rem; height: 120px; overflow-y: auto; color: #ccc;
+        }
+        .console-line { margin: 2px 0; }
+        .console-success { color: var(--neon-green); }
+        .console-info { color: #00ccff; }
+        .console-error { color: #ff3333; }
+
+        @media (max-width: 768px) {
+            .wrapper { flex-direction: column; overflow-y: auto; }
+            .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 2px solid var(--neon-green); }
+            .main-content { height: auto; overflow: visible; }
+            body { overflow: auto; height: auto; }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="matrixCanvas"></canvas>
+
+<div class="wrapper">
+    <aside class="sidebar">
+        <h2 class="hacker-header">> PERFIL</h2>
+        <div class="student-info mb-4">
+            <p><strong>Alumno:</strong><br>Ramírez Lozano<br>Gael Martín</p>
+            <p class="mt-3"><strong>Grupo:</strong><br>6CM1</p>
+            <p class="mt-3"><strong>Escuela:</strong><br>ESCOM - IPN</p>
+            <p class="mt-3"><strong>Materia:</strong><br>Introduction to Cryptography</p>
+        </div>
+        <div class="text-center">
+            <img src="yo.png" class="img-fluid silhouette-outline d-block mx-auto" width="150" height="150" alt="Foto">
+        </div>
+        <div class="practice-info">
+            <h6>PRÁCTICA 0</h6>
+            <p>Manipulación de Bits<br>(TXT + BMP)</p>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="text-center mb-5">
+            <h1 style="text-shadow: 0 0 10px var(--neon-green); user-select: none;">> SISTEMA LSB DE ESTEGANOGRAFÍA</h1>
+        </div>
+
+        <ul class="nav nav-tabs mb-4" id="cryptoTabs" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" id="hide-tab" data-bs-toggle="tab" data-bs-target="#hide-panel" type="button">
+                    <i class="bi bi-eye-slash-fill"></i> MÓDULO HIDE (CIFRAR)
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="show-tab" data-bs-toggle="tab" data-bs-target="#show-panel" type="button">
+                    <i class="bi bi-eye-fill"></i> MÓDULO SHOW (DESCIFRAR)
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="cryptoTabsContent">
+            
+            <div class="tab-pane fade show active" id="hide-panel">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <input type="file" id="fileImgHide" accept=".bmp" class="file-input-hidden" onchange="previewFile(this, 'boxImgHide', 'image')" onclick="this.value=null">
+                        <label for="fileImgHide" id="boxImgHide" class="custom-upload-box">
+                            <div class="upload-info-container">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-card-image main-icon"></i>
+                                    <span class="upload-title">SELECCIONAR IMAGEN (.BMP)</span>
+                                </div>
+                                <button class="btn-remove-file" onclick="clearFile(event, 'fileImgHide', 'boxImgHide', 'SELECCIONAR IMAGEN (.BMP)')">
+                                    <i class="bi bi-trash"></i> ELIMINAR
+                                </button>
+                            </div>
+                            <span class="file-status">Arrastra tu archivo aquí o haz clic</span>
+                            <div class="preview-area"></div>
+                        </label>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <input type="file" id="fileTxtHide" accept=".txt" class="file-input-hidden" onchange="previewFile(this, 'boxTxtHide', 'text')" onclick="this.value=null">
+                        <label for="fileTxtHide" id="boxTxtHide" class="custom-upload-box">
+                            <div class="upload-info-container">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-file-earmark-text main-icon"></i>
+                                    <span class="upload-title">SELECCIONAR SECRETOS (.TXT)</span>
+                                </div>
+                                <button class="btn-remove-file" onclick="clearFile(event, 'fileTxtHide', 'boxTxtHide', 'SELECCIONAR SECRETOS (.TXT)')">
+                                    <i class="bi bi-trash"></i> ELIMINAR
+                                </button>
+                            </div>
+                            <span class="file-status">Arrastra tu archivo aquí o haz clic</span>
+                            <div class="preview-area"></div>
+                        </label>
+                    </div>
+
+                    <div class="col-12 mt-4">
+                        <button class="btn-cyber" onclick="ejecutarHide()">
+                            <i class="bi bi-terminal"></i> EJECUTAR CIFRADO
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="show-panel">
+                <div class="row g-4 justify-content-center">
+                    <div class="col-md-8">
+                        <input type="file" id="fileImgShow" accept=".bmp" class="file-input-hidden" onchange="previewFile(this, 'boxImgShow', 'image')" onclick="this.value=null">
+                        <label for="fileImgShow" id="boxImgShow" class="custom-upload-box">
+                            <div class="upload-info-container">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-lock-fill main-icon"></i>
+                                    <span class="upload-title">CARGAR IMAGEN CIFRADA (.BMP)</span>
+                                </div>
+                                <button class="btn-remove-file" onclick="clearFile(event, 'fileImgShow', 'boxImgShow', 'CARGAR IMAGEN CIFRADA (.BMP)')">
+                                    <i class="bi bi-trash"></i> ELIMINAR
+                                </button>
+                            </div>
+                            <span class="file-status">Arrastra tu archivo aquí o haz clic</span>
+                            <div class="preview-area"></div>
+                        </label>
+                    </div>
+
+                    <div class="col-12 mt-4">
+                        <button class="btn-cyber" onclick="ejecutarShow()">
+                            <i class="bi bi-unlock"></i> REVELAR MENSAJE
+                        </button>
+                    </div>
+                    
+                    <div class="col-12 mt-3">
+                        <label class="text-light mb-2">> CONTENIDO DESCIFRADO:</label>
+                        <textarea class="form-control bg-dark text-success border-secondary" rows="3" readonly placeholder="El mensaje aparecerá aquí..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="console-box" id="systemConsole">
+            <div class="console-line">> Sistema iniciado correctamente.</div>
+            <div class="console-line">> Esperando inputs del usuario...</div>
+        </div>
+
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script type="module">
+    import init, { hide_message, show_message } from './pkg/steganography_core.js';
+
+    async function run() {
+        try {
+            await init();
+            logToConsole("Módulo Criptográfico (Rust/WASM) cargado.", "success");
+        } catch (e) {
+            logToConsole("Error cargando Rust. Asegúrate de usar un servidor local.", "error");
+        }
+    }
+    run();
+
+    let imgHideBytes = null;
+    let imgShowBytes = null;
+    let txtHideContent = "";
+    let originalFileName = "flores";
+    let originalShowFileName = "imagen";
+
+    /* --- MATRIX CANVAS --- */
+    const canvas = document.getElementById('matrixCanvas');
+    const ctx = canvas.getContext('2d');
+    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    const letters = "0101010100010101010111"; 
+    const fontSize = 14;
+    const columns = canvas.width / fontSize;
+    const drops = [];
+    for (let x = 0; x < columns; x++) drops[x] = 1;
+    let mouse = { x: -1000, y: -1000 };
+    document.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    function drawMatrix() {
+        ctx.fillStyle = 'rgba(5, 5, 5, 0.1)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#0f0'; ctx.font = fontSize + 'px monospace';
+        for (let i = 0; i < drops.length; i++) {
+            const text = letters.charAt(Math.floor(Math.random() * letters.length));
+            const x = i * fontSize; const y = drops[i] * fontSize;
+            const dist = Math.sqrt((x - mouse.x)**2 + (y - mouse.y)**2);
+            if (dist < 150) { const alpha = 1 - (dist / 150); ctx.fillStyle = `rgba(0, 255, 65, ${alpha})`; ctx.fillText(text, x, y); }
+            if (y > canvas.height && Math.random() > 0.975) drops[i] = 0;
+            drops[i]++;
+        }
+    }
+    setInterval(drawMatrix, 40);
+
+    /* --- DRAG AND DROP & FILE LOGIC --- */
+
+    function setupDragAndDrop(boxId, inputId, type) {
+        const box = document.getElementById(boxId);
+        const input = document.getElementById(inputId);
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            box.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            box.addEventListener(eventName, () => {
+                if(!input.disabled) box.classList.add('drag-over');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            box.addEventListener(eventName, () => box.classList.remove('drag-over'), false);
+        });
+
+        box.addEventListener('drop', (e) => {
+            if(input.disabled) return;
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                input.files = files;
+                window.previewFile(input, boxId, type);
+            }
+        }, false);
+    }
+
+    setupDragAndDrop('boxImgHide', 'fileImgHide', 'image');
+    setupDragAndDrop('boxTxtHide', 'fileTxtHide', 'text');
+    setupDragAndDrop('boxImgShow', 'fileImgShow', 'image');
+
+
+    window.previewFile = function(input, boxId, type) {
+        const box = document.getElementById(boxId);
+        const previewContainer = box.querySelector('.preview-area');
+        const titleSpan = box.querySelector('.upload-title');
+        
+        previewContainer.innerHTML = '';
+
+        if (input.files && input.files.length > 0) {
+            const file = input.files[0];
+            
+            box.classList.add('has-file'); 
+            box.classList.add('disabled-state'); 
+            input.disabled = true;
+
+            // --- LÓGICA VISUAL INMEDIATA (PRE-LECTURA) ---
+            if (type === 'image') {
+                titleSpan.textContent = "IMAGEN SELECCIONADA (.BMP)";
+                titleSpan.style.color = "#0f0";
+
+                // CAPTURAR NOMBRE ORIGINAL (SIN EXTENSIÓN)
+                if (boxId === 'boxImgHide') {
+                    originalFileName = file.name.replace(/\.[^/.]+$/, "");
+                }
+                if (boxId === 'boxImgShow') {
+                    originalShowFileName = file.name.replace(/\.[^/.]+$/, "").replace(/_h$/, "");
+                }
+
+                // Se genera la URL directamente del objeto File en RAM
+                const url = URL.createObjectURL(file);
+                const img = document.createElement('img');
+                img.src = url;
+                img.className = 'preview-img-content';
+                previewContainer.appendChild(img);
+            } else {
+                titleSpan.textContent = "SECRETOS SELECCIONADOS (.TXT)";
+                titleSpan.style.color = "#0f0";
+            }
+
+            logToConsole("Leyendo: " + file.name, "info");
+
+            // --- LÓGICA DE DATOS (LECTURA ASÍNCRONA) ---
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const arrayBuffer = e.target.result;
+
+                if (type === 'image') {
+                    // Solo asignamos los bytes para Rust, sin tocar el DOM
+                    const uint8Array = new Uint8Array(arrayBuffer);
+                    if (boxId === 'boxImgHide') imgHideBytes = uint8Array;
+                    if (boxId === 'boxImgShow') imgShowBytes = uint8Array;
+                }
+                else if (type === 'text') {
+                    const decoder = new TextDecoder("utf-8");
+                    const text = decoder.decode(arrayBuffer);
+                    txtHideContent = text;
+
+                    const textDiv = document.createElement('div');
+                    textDiv.className = 'preview-text-content';
+                    textDiv.textContent = text.length > 2000 ? text.substring(0, 2000) + "\n... [TRUNCADO] ..." : text;
+                    previewContainer.appendChild(textDiv);
+                }
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+    };
+
+    window.clearFile = function(event, inputId, boxId, originalText) {
+        event.preventDefault(); event.stopPropagation();
+        const input = document.getElementById(inputId);
+        const box = document.getElementById(boxId);
+        const previewContainer = box.querySelector('.preview-area');
+        const titleSpan = box.querySelector('.upload-title');
+
+        input.disabled = false;
+        input.value = "";
+        
+        if (inputId === 'fileImgHide') {
+            imgHideBytes = null;
+            originalFileName = "flores";
+        }
+        if (inputId === 'fileImgShow') { imgShowBytes = null; originalShowFileName = "imagen"; }
+        if (inputId === 'fileTxtHide') txtHideContent = "";
+
+        box.classList.remove('has-file');
+        box.classList.remove('disabled-state');
+        previewContainer.innerHTML = "";
+        titleSpan.textContent = originalText;
+        titleSpan.style.color = ""; 
+
+        logToConsole("Selección eliminada.", "error");
+    };
+
+    window.ejecutarHide = function() {
+        if (!imgHideBytes || !txtHideContent) {
+            logToConsole("ERROR: Faltan archivos.", "error");
+            return;
+        }
+
+        logToConsole("Cifrando LSB con Rust...", "info");
+
+        setTimeout(() => {
+            try {
+                const resultBytes = hide_message(imgHideBytes, txtHideContent);
+                
+                const blob = new Blob([resultBytes], { type: "image/bmp" });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${originalFileName}_h.bmp`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                logToConsole("¡Éxito! Archivo generado y descargado.", "success");
+            } catch (e) {
+                console.error(e);
+                logToConsole("Error en Rust: " + e, "error");
+            }
+        }, 100);
+    };
+
+    window.ejecutarShow = function() {
+        if (!imgShowBytes) {
+            logToConsole("ERROR: No hay imagen cargada.", "error");
+            return;
+        }
+
+        logToConsole("Descifrando bits con Rust...", "info");
+
+        setTimeout(() => {
+            try {
+                const secret = show_message(imgShowBytes);
+                const textArea = document.querySelector("textarea");
+                textArea.value = secret;
+
+                if (secret.startsWith("Error:")) {
+                    logToConsole("No se encontró mensaje.", "error");
+                } else {
+                    logToConsole("Mensaje revelado.", "success");
+
+                    // --- AUTO-DESCARGA DE IMAGEN DESCIFRADA (_s.bmp) ---
+                    const imgBlob = new Blob([imgShowBytes], { type: "image/bmp" });
+                    const imgUrl = URL.createObjectURL(imgBlob);
+                    const imgLink = document.createElement("a");
+                    imgLink.href = imgUrl;
+                    imgLink.download = `${originalShowFileName}_s.bmp`;
+                    document.body.appendChild(imgLink);
+                    imgLink.click();
+                    document.body.removeChild(imgLink);
+                    URL.revokeObjectURL(imgUrl);
+                    logToConsole(`Imagen descargada: ${originalShowFileName}_s.bmp`, "success");
+
+                    // --- AUTO-DESCARGA DE TEXTO DESCIFRADO (_s.txt) ---
+                    const txtBlob = new Blob([secret], { type: "text/plain;charset=utf-8" });
+                    const txtUrl = URL.createObjectURL(txtBlob);
+                    const txtLink = document.createElement("a");
+                    txtLink.href = txtUrl;
+                    txtLink.download = `${originalShowFileName}_s.txt`;
+                    document.body.appendChild(txtLink);
+                    txtLink.click();
+                    document.body.removeChild(txtLink);
+                    URL.revokeObjectURL(txtUrl);
+                    logToConsole(`Texto descargado: ${originalShowFileName}_s.txt`, "success");
+                }
+            } catch (e) {
+                logToConsole("Error al procesar: " + e, "error");
+            }
+        }, 100);
+    };
+
+    function logToConsole(message, type) {
+        const consoleBox = document.getElementById('systemConsole');
+        const newLine = document.createElement('div');
+        newLine.className = 'console-line';
+        const timestamp = new Date().toLocaleTimeString();
+        if (type === 'success') newLine.classList.add('console-success');
+        if (type === 'info') newLine.classList.add('console-info');
+        if (type === 'error') newLine.classList.add('console-error');
+        newLine.innerHTML = `> [${timestamp}] ${message}`;
+        consoleBox.appendChild(newLine);
+        consoleBox.scrollTop = consoleBox.scrollHeight;
+    }
+</script>
+
+</body>
+</html>

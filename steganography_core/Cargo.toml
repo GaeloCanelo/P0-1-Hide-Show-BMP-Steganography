@@ -1,0 +1,10 @@
+[package]
+name = "steganography_core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"] # Importante: Indica que es una librería dinámica para C/WASM
+
+[dependencies]
+wasm-bindgen = "0.2"

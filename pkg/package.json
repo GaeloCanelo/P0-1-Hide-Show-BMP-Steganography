@@ -1,0 +1,15 @@
+{
+  "name": "steganography_core",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "steganography_core_bg.wasm",
+    "steganography_core.js",
+    "steganography_core.d.ts"
+  ],
+  "main": "steganography_core.js",
+  "types": "steganography_core.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
